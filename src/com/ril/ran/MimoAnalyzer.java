@@ -8,13 +8,38 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
+/*cNum	Band
+0	2300 C1
+1	2300 C1
+2	2300 C1
+3	1800
+4	1800
+5	1800
+6	850-C1
+7	850-C2
+9	2300 C2
+10	2300 C2
+11	2300 C2
+12	2300 C2
+13	2300 C2
+14	2300 C2
+15	850-C1
+16	850-C2
+18	2300 C1
+19	2300 C1
+20	2300 C1
+24	850-C1
+25	850-C2
+*/
+
+
 public class MimoAnalyzer {
 
 	public static void main(String[] args) {
 		
 		MimoAnalyzer ma = new MimoAnalyzer();
 		
-		File file = new File("C:\\Users\\Ken\\Documents\\5G\\Projects\\Data\\Mumbai-Wednesday.csv");
+		File file = new File("C:\\Users\\Ken\\Documents\\5G\\Projects\\Data\\Mumbai-Saturday.csv");
 		
 		HashMap<String, HashMap<String, NetworkStatsData>> aMap = ma.loadFile(file);
 		
@@ -87,7 +112,7 @@ public class MimoAnalyzer {
 			      rowScanner.close();
 			      index = 0;
 			      
-			      if (record.getBand().contentEquals("2300_1")) {
+			      if (record.getBand().contentEquals("2300_1") || record.getBand().contentEquals("2300_2") ) {
 			    	 
 				      bMap.put(record.getDate()+"-"+record.getTime(), record);
 				      //if (record.getBand().contentEquals("2300_1"))
@@ -109,11 +134,19 @@ public class MimoAnalyzer {
 	
 	void processBiSectors(HashMap<String, HashMap<String, NetworkStatsData>> aMap) {
 		for (Map.Entry<String,HashMap<String, NetworkStatsData>> cell : aMap.entrySet()) { 
-			if (cell.getKey().contains("_c18") || cell.getKey().contains("_c19") || cell.getKey().contains("_c20")) {
-				String biSectorCellName = cell.getKey();
+			String cellId = cell.getKey();
+			if (cellId.contains("_c18") || cellId.contains("_c19") || cellId.contains("_c20") ||
+					cellId.contains("_c12") || cellId.contains("_c13") || cellId.contains("_c14")) {
+				String biSectorCellName = cellId;
 				int sector = Integer.parseInt(biSectorCellName.split("_c")[1]);
 				String siteName = biSectorCellName.split("_c")[0];
-				String biSectorCellName_1 = siteName + "_c" + (sector -18);
+				
+				String biSectorCellName_1;
+				if (biSectorCellName.contains("_c18") || biSectorCellName.contains("_c19") || biSectorCellName.contains("_c20")) {
+					biSectorCellName_1 = siteName + "_c" + (sector - 18);
+				} else {
+					biSectorCellName_1 = siteName + "_c" + (sector - 3);
+				}
 				
 				for (Map.Entry<String, NetworkStatsData> hourlyRecord : cell.getValue().entrySet()) {
 					HashMap<String, NetworkStatsData> biSectorCell_1_map = aMap.get(biSectorCellName_1);
@@ -192,7 +225,7 @@ public class MimoAnalyzer {
 				
 			}
 		}
-		System.out.println("Total 2300 sectors with bi-sectors consolidated: " + total2300Sectors);
+		System.out.println("Total 2300 band sectors with bi-sectors consolidated: " + total2300Sectors);
 		System.out.println(">180: " + sectorRRC_180.size() + ", Percentage: " + (double)sectorRRC_180.size()/(double)total2300Sectors );
 		System.out.println("150-180: " + sectorRRC_150.size() + ", Percentage: " + (double)sectorRRC_150.size()/(double)total2300Sectors );
 		System.out.println("120-150: " + sectorRRC_120.size() + ", Percentage: " + (double)sectorRRC_120.size()/(double)total2300Sectors );
