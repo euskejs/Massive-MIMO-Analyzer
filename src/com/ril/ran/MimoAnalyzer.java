@@ -35,6 +35,8 @@ import java.util.Set;
 
 public class MimoAnalyzer {
 
+	int biSectorNum = 0;
+	
 	public static void main(String[] args) {
 		
 		MimoAnalyzer ma = new MimoAnalyzer();
@@ -128,7 +130,7 @@ public class MimoAnalyzer {
 			e.printStackTrace();
 		}
 		
-		
+		System.out.println("total rows in aMap: " + aMap.size());
 		return aMap;
 	}
 	
@@ -136,7 +138,7 @@ public class MimoAnalyzer {
 		for (Map.Entry<String,HashMap<String, NetworkStatsData>> cell : aMap.entrySet()) { 
 			String cellId = cell.getKey();
 			if (cellId.contains("_c18") || cellId.contains("_c19") || cellId.contains("_c20") ||
-					cellId.contains("_c12") || cellId.contains("_c13") || cellId.contains("_c14")) {
+					cellId.contains("_c9") || cellId.contains("_c10") || cellId.contains("_c11")) {
 				String biSectorCellName = cellId;
 				int sector = Integer.parseInt(biSectorCellName.split("_c")[1]);
 				String siteName = biSectorCellName.split("_c")[0];
@@ -145,7 +147,7 @@ public class MimoAnalyzer {
 				if (biSectorCellName.contains("_c18") || biSectorCellName.contains("_c19") || biSectorCellName.contains("_c20")) {
 					biSectorCellName_1 = siteName + "_c" + (sector - 18);
 				} else {
-					biSectorCellName_1 = siteName + "_c" + (sector - 3);
+					biSectorCellName_1 = siteName + "_c" + (sector + 3);
 				}
 				
 				for (Map.Entry<String, NetworkStatsData> hourlyRecord : cell.getValue().entrySet()) {
@@ -153,6 +155,7 @@ public class MimoAnalyzer {
 					//System.out.println(biSectorCellName_1 + ":" + biSectorCellName + ":" + hourlyRecord.getKey());
 					
 					if (biSectorCell_1_map != null) {
+						biSectorNum++;
 						NetworkStatsData biSector_1_hourlyRecord = biSectorCell_1_map.get(hourlyRecord.getKey());
 						if (biSector_1_hourlyRecord != null) {
 							NetworkStatsData biSector_2_hourlyRecord = hourlyRecord.getValue();
@@ -168,6 +171,7 @@ public class MimoAnalyzer {
 				}	
 			}
 		}
+		System.out.println("Bi-sector Num: " + biSectorNum/24);
 	}
 	
 	public void printMimoSiteNum(HashMap<String, HashMap<String, NetworkStatsData>> aMap) {
@@ -188,7 +192,8 @@ public class MimoAnalyzer {
 		for (Map.Entry<String,HashMap<String, NetworkStatsData>> cell : aMap.entrySet()) { 
 			String cellName = cell.getKey();
 			String sector = cellName.split("_c")[1];
-			if (sector.equalsIgnoreCase("0") || sector.equalsIgnoreCase("1") || sector.equalsIgnoreCase("2")) {
+			if (sector.equalsIgnoreCase("0") || sector.equalsIgnoreCase("1") || sector.equalsIgnoreCase("2") ||
+					sector.equalsIgnoreCase("12") || sector.equalsIgnoreCase("13") || sector.equalsIgnoreCase("14")) {
 				total2300Sectors++;
 				for (Map.Entry<String, NetworkStatsData> hourlyRecord : cell.getValue().entrySet()) {
 					NetworkStatsData mm = hourlyRecord.getValue();
