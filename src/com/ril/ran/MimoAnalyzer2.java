@@ -8,46 +8,19 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
-/*cNum	Band
-0	2300 C1
-1	2300 C1
-2	2300 C1
-3	1800
-4	1800
-5	1800
-6	850-C1
-7	850-C2
-9	2300 C2
-10	2300 C2
-11	2300 C2
-12	2300 C2
-13	2300 C2
-14	2300 C2
-15	850-C1
-16	850-C2
-18	2300 C1
-19	2300 C1
-20	2300 C1
-24	850-C1
-25	850-C2
-*/
-
-
-public class MimoAnalyzer {
-
-	int biSectorNum = 0;
+public class MimoAnalyzer2 {
 	
 	public static void main(String[] args) {
 		
-		MimoAnalyzer ma = new MimoAnalyzer();
+		MimoAnalyzer2 ma = new MimoAnalyzer2();
 		
 		File file = new File("C:\\Users\\Ken\\Documents\\5G\\Projects\\Data\\Mumbai-Saturday.csv");
 		
 		HashMap<String, HashMap<String, NetworkStatsData>> aMap = ma.loadFile(file);
 		
-		ma.processBiSectors(aMap);
+		//ma.processBiSectors(aMap);
 		
-		ma.printMimoSiteNum(aMap,2);
+		ma.printMimoSiteNum(aMap, 2);
 		
 	}			
 	
@@ -156,7 +129,7 @@ public class MimoAnalyzer {
 					//System.out.println(biSectorCellName_1 + ":" + biSectorCellName + ":" + hourlyRecord.getKey());
 					
 					if (biSectorCell_1_map != null) {
-						biSectorNum++;
+						
 						NetworkStatsData biSector_1_hourlyRecord = biSectorCell_1_map.get(hourlyRecord.getKey());
 						if (biSector_1_hourlyRecord != null) {
 							NetworkStatsData biSector_2_hourlyRecord = hourlyRecord.getValue();
@@ -172,105 +145,86 @@ public class MimoAnalyzer {
 				}	
 			}
 		}
-		System.out.println("Bi-sector Num: " + biSectorNum/24);
 	}
 	
-	public void printMimoSiteNum(HashMap<String, HashMap<String, NetworkStatsData>> aMap, double growth_factor) {
+	public void printMimoSiteNum(HashMap<String, HashMap<String, NetworkStatsData>> aMap, double grownth_factor ) {
 		
 		final double CQI = 7.5;
 		final double CQI_BISECTOR = 7;
 		final int INTERFERENCE = -107;
-		final double GROWTH_FACTOR = growth_factor;
-		
-		int total2300Sectors = 0;
+		final double GROWTH_FACTOR = grownth_factor;
 		
 		Set<String> sectorRRC_180 = new HashSet<String>();
 		Set<String> sectorRRC_150 = new HashSet<String>();
 		Set<String> sectorRRC_120 = new HashSet<String>();
 		Set<String> sectorRRC_90 = new HashSet<String>();
-		Set<String> sectorRRC_60 = new HashSet<String>();
-		
-		Set<String> biSector_180 = new HashSet<String>();
-		Set<String> biSector_150 = new HashSet<String>();
-		Set<String> biSector_120 = new HashSet<String>();
-		Set<String> biSector_90 = new HashSet<String>();
-		Set<String> biSector_60 = new HashSet<String>();
+		Set<String> sectorRRC_60 = new HashSet<String>();	
 		
 			
 		for (Map.Entry<String,HashMap<String, NetworkStatsData>> cell : aMap.entrySet()) { 
-			String cellName = cell.getKey();
-			String sector = cellName.split("_c")[1];
-			if (sector.equalsIgnoreCase("0") || sector.equalsIgnoreCase("1") || sector.equalsIgnoreCase("2") ||
-					sector.equalsIgnoreCase("12") || sector.equalsIgnoreCase("13") || sector.equalsIgnoreCase("14")) {
-				total2300Sectors++;
-				for (Map.Entry<String, NetworkStatsData> hourlyRecord : cell.getValue().entrySet()) {
-					NetworkStatsData mm = hourlyRecord.getValue();
-					if (mm.getIsBiSector()) {
-						if ((mm.getMeanCQI_1052() > CQI_BISECTOR) && (mm.getInterference_0811() < INTERFERENCE)) {
-							if (mm.getRrcConnectedUsers_0309() * GROWTH_FACTOR >= 180) {
-								sectorRRC_180.add(cell.getKey());
-								biSector_180.add(cell.getKey());
-							} else if (mm.getRrcConnectedUsers_0309() * GROWTH_FACTOR >= 150) {
-								sectorRRC_150.add(cell.getKey());
-								biSector_150.add(cell.getKey());
-							} else if (mm.getRrcConnectedUsers_0309() * GROWTH_FACTOR >= 120) {
-								sectorRRC_120.add(cell.getKey());
-								biSector_120.add(cell.getKey());
-							} else if (mm.getRrcConnectedUsers_0309() * GROWTH_FACTOR >= 90) {
-								sectorRRC_90.add(cell.getKey());
-								biSector_90.add(cell.getKey());
-							} else if (mm.getRrcConnectedUsers_0309() * GROWTH_FACTOR >= 60) {
-								sectorRRC_60.add(cell.getKey());
-								biSector_60.add(cell.getKey());
-							}
+			String cellId = cell.getKey();
+			
+			for (Map.Entry<String, NetworkStatsData> hourlyRecord : cell.getValue().entrySet()) {
+				NetworkStatsData mm = hourlyRecord.getValue();
+				if (cellId.contains("_c18") || cellId.contains("_c19") || cellId.contains("_c20") ||
+						cellId.contains("_c9") || cellId.contains("_c10") || cellId.contains("_c11")) {
+					
+					if ((mm.getMeanCQI_1052() > CQI_BISECTOR) && (mm.getInterference_0811() < INTERFERENCE)) {
+						if (mm.getRrcConnectedUsers_0309() * GROWTH_FACTOR >= 180) {
+							sectorRRC_180.add(cell.getKey());
+							
+						} else if (mm.getRrcConnectedUsers_0309() * GROWTH_FACTOR >= 150) {
+							sectorRRC_150.add(cell.getKey());
+							
+						} else if (mm.getRrcConnectedUsers_0309() * GROWTH_FACTOR >= 120) {
+							sectorRRC_120.add(cell.getKey());
+							
+						} else if (mm.getRrcConnectedUsers_0309() * GROWTH_FACTOR >= 90) {
+							sectorRRC_90.add(cell.getKey());
+							
+						} else if (mm.getRrcConnectedUsers_0309() * GROWTH_FACTOR >= 60) {
+							sectorRRC_60.add(cell.getKey());
+							
 						}
-					} else {	
-						if ((mm.getMeanCQI_1052() > CQI) && (mm.getInterference_0811() < INTERFERENCE)) {
-							if (mm.getRrcConnectedUsers_0309() >= 180) {
-								sectorRRC_180.add(cell.getKey());
-							} else if (mm.getRrcConnectedUsers_0309() * GROWTH_FACTOR >= 150) {
-								sectorRRC_150.add(cell.getKey());
-							} else if (mm.getRrcConnectedUsers_0309() * GROWTH_FACTOR >= 120) {
-								sectorRRC_120.add(cell.getKey());
-							} else if (mm.getRrcConnectedUsers_0309() * GROWTH_FACTOR >= 90) {
-								sectorRRC_90.add(cell.getKey());
-							} else if (mm.getRrcConnectedUsers_0309() * GROWTH_FACTOR >= 60) {
-								sectorRRC_60.add(cell.getKey());
-							}
+					}
+				} else {	
+					if ((mm.getMeanCQI_1052() > CQI) && (mm.getInterference_0811() < INTERFERENCE)) {
+						if (mm.getRrcConnectedUsers_0309() * GROWTH_FACTOR >= 180) {
+							sectorRRC_180.add(cell.getKey());
+						} else if (mm.getRrcConnectedUsers_0309() * GROWTH_FACTOR >= 150) {
+							sectorRRC_150.add(cell.getKey());
+						} else if (mm.getRrcConnectedUsers_0309() * GROWTH_FACTOR >= 120) {
+							sectorRRC_120.add(cell.getKey());
+						} else if (mm.getRrcConnectedUsers_0309() * GROWTH_FACTOR >= 90) {
+							sectorRRC_90.add(cell.getKey());
+						} else if (mm.getRrcConnectedUsers_0309() * GROWTH_FACTOR >= 60) {
+							sectorRRC_60.add(cell.getKey());
 						}
 					}
 				}
-				
 			}
+					
 		}
-		System.out.println("Total 2300 band sectors with bi-sectors consolidated: " + total2300Sectors);
 		
 		System.out.println(">180: " + sectorRRC_180.size() + ", Percentage: " + 
-		(double)sectorRRC_180.size()/(double)total2300Sectors + ", BiSectorCells: " + biSector_180.size());
+		(double)sectorRRC_180.size()/(double)aMap.size() );
 		
 		System.out.println("150-180: " + sectorRRC_150.size() + ", Percentage: " + 
-		(double)sectorRRC_150.size()/(double)total2300Sectors + ", BiSectorCells: " + biSector_150.size());
+		(double)sectorRRC_150.size()/(double)aMap.size() );
 		
 		System.out.println("120-150: " + sectorRRC_120.size() + ", Percentage: " + 
-		(double)sectorRRC_120.size()/(double)total2300Sectors + ", BiSectorCells: " + biSector_120.size());
+		(double)sectorRRC_120.size()/(double)aMap.size() );
 		
 		System.out.println("90-120: " + sectorRRC_90.size() + ", Percentage: " + 
-		(double)sectorRRC_90.size()/(double)total2300Sectors + ", BiSectorCells: " + biSector_90.size());
+		(double)sectorRRC_90.size()/(double)aMap.size() );
 		
 		System.out.println("60-90: " + sectorRRC_60.size() + ", Percentage: " + 
-		(double)sectorRRC_60.size()/(double)total2300Sectors + ", BiSectorCells: " + biSector_60.size());
+		(double)sectorRRC_60.size()/(double)aMap.size() );
 		
 /*		Iterator<String> itr = sectorRRC_180.iterator();
 		while (itr.hasNext()) {
 			System.out.println(itr.next());
 		}*/
-	}
-	
-	
-	public void printFwaSiteNum(HashMap<String, HashMap<String, NetworkStatsData>> aMap) {
-		for (Map.Entry<String,HashMap<String, NetworkStatsData>> cell : aMap.entrySet()) {
-			
-		}
 	}
 	
 }
