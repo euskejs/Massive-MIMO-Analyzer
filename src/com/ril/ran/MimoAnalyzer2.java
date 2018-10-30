@@ -15,9 +15,11 @@ public class MimoAnalyzer2 {
 		
 		MimoAnalyzer2 ma = new MimoAnalyzer2();
 		
-		File file = new File("C:\\Users\\Ken\\Documents\\5G\\Projects\\Data\\Mumbai-Thursday_29102018.csv");
+		File file = new File("C:\\Users\\Ken\\Documents\\5G\\Projects\\Data\\Assam-17-Oct-Wed_27102018.csv");
 		
 		HashMap<String, HashMap<String, NetworkStatsData>> aMap = ma.loadFile(file);
+		
+		ma.process2300Carriers(aMap);
 		
 		// Estimate with current load
 		System.out.println("Under current load:");
@@ -95,8 +97,7 @@ public class MimoAnalyzer2 {
 			      if (record.getBand().contentEquals("2300_1") || record.getBand().contentEquals("2300_2") ) {
 			    	 
 				      bMap.put(record.getDate()+"-"+record.getTime(), record);
-				      //if (record.getBand().contentEquals("2300_1"))
-				    	  //System.out.println(record.getCellId()+"{"+ bMap +"}");
+				      //System.out.println("***"+record.getDate()+"-"+record.getTime());
 				      aMap.put(record.getCellId(), bMap);
 			      } 
 			         
@@ -112,13 +113,79 @@ public class MimoAnalyzer2 {
 		return aMap;
 	}
 	
+	void process2300Carriers(HashMap<String, HashMap<String, NetworkStatsData>> aMap) {
+		for (Map.Entry<String,HashMap<String, NetworkStatsData>> cell : aMap.entrySet()) { 
+			String cellId = cell.getKey();
+			if (cellId.contains("_c12") || cellId.contains("_c13") || cellId.contains("_c14") ||
+					cellId.contains("_c9") || cellId.contains("_c10") || cellId.contains("_c11")) {
+				String sectorName = cellId;
+				int sector = Integer.parseInt(sectorName.split("_c")[1]);
+				String siteName = sectorName.split("_c")[0];
+				
+				String sectorCellName_1;
+				if (sectorName.contains("_c12") || sectorName.contains("_c13") || sectorName.contains("_c14")) {
+					sectorCellName_1 = siteName + "_c" + (sector - 12);
+				} else {
+					sectorCellName_1 = siteName + "_c" + (sector + 9);
+				}
+				
+				
+				for (Map.Entry<String, NetworkStatsData> hourlyRecord : cell.getValue().entrySet()) {
+					HashMap<String, NetworkStatsData> carrier1CellMap = aMap.get(sectorCellName_1);
+				
+					if (carrier1CellMap != null) {
+						NetworkStatsData carrier_1_hourlyRecord = carrier1CellMap.get(hourlyRecord.getKey());
+						NetworkStatsData carrier_2_hourlyRecord = hourlyRecord.getValue();
+						
+						if ((carrier_1_hourlyRecord != null) && (carrier_2_hourlyRecord != null)) {
+							carrier_1_hourlyRecord.setMeanCQI_1052((carrier_1_hourlyRecord.getMeanCQI_1052() + carrier_2_hourlyRecord.getMeanCQI_1052())/2);
+							carrier_2_hourlyRecord.setMeanCQI_1052((carrier_1_hourlyRecord.getMeanCQI_1052() + carrier_2_hourlyRecord.getMeanCQI_1052())/2);
+							
+							carrier_1_hourlyRecord.setInterference_0811((carrier_1_hourlyRecord.getInterference_0811() + carrier_2_hourlyRecord.getInterference_0811())/2);
+							carrier_2_hourlyRecord.setInterference_0811((carrier_1_hourlyRecord.getInterference_0811() + carrier_2_hourlyRecord.getInterference_0811())/2);
+							
+							carrier_1_hourlyRecord.setRrcConnectedUsers_0309(carrier_1_hourlyRecord.getRrcConnectedUsers_0309() + carrier_2_hourlyRecord.getRrcConnectedUsers_0309());
+							carrier_2_hourlyRecord.setRrcConnectedUsers_0309(carrier_1_hourlyRecord.getRrcConnectedUsers_0309() + carrier_2_hourlyRecord.getRrcConnectedUsers_0309());
+						}
+					}
+				}	
+			} else if (cellId.contains("_c18") || cellId.contains("_c19") || cellId.contains("_c20") ||
+					cellId.contains("_c9") || cellId.contains("_c10") || cellId.contains("_c11")) {
+				String biSectorCellName = cellId;
+				int sector = Integer.parseInt(biSectorCellName.split("_c")[1]);
+				String siteName = biSectorCellName.split("_c")[0];
+				
+				String biSectorCellName_1;
+				if (biSectorCellName.contains("_c18") || biSectorCellName.contains("_c19") || biSectorCellName.contains("_c20")) {
+					biSectorCellName_1 = siteName + "_c" + (sector - 18);
+				} else {
+					biSectorCellName_1 = siteName + "_c" + (sector + 3);
+				}
+				
+				for (Map.Entry<String, NetworkStatsData> hourlyRecord : cell.getValue().entrySet()) {
+					HashMap<String, NetworkStatsData> biSectorCell_1_map = aMap.get(biSectorCellName_1);
+					//System.out.println(biSectorCellName_1 + ":" + biSectorCellName + ":" + hourlyRecord.getKey());
+					
+					if (biSectorCell_1_map != null) {
+						
+						NetworkStatsData biSector_1_hourlyRecord = biSectorCell_1_map.get(hourlyRecord.getKey());
+						if (biSector_1_hourlyRecord != null) {
+							NetworkStatsData biSector_2_hourlyRecord = hourlyRecord.getValue();
+							biSector_1_hourlyRecord.setIsBiSector(true);
+							biSector_2_hourlyRecord.setIsBiSector(true);
+						}
+					} 
+				}	
+			}
+		}	
+	}
+	
 	public void printMimoSiteNum(HashMap<String, HashMap<String, NetworkStatsData>> aMap, double grownth_factor ) {
 		
 		final double CQI = 7.5;
 		final double CQI_BISECTOR = 7;
 		final int INTERFERENCE = -107;
 		final double GROWTH_FACTOR = grownth_factor;
-		final double MAX_DL_PRB = 50;
 		
 		Set<String> sectorRRC_180 = new HashSet<String>();
 		Set<String> sectorRRC_150 = new HashSet<String>();
@@ -126,30 +193,22 @@ public class MimoAnalyzer2 {
 		Set<String> sectorRRC_90 = new HashSet<String>();
 		Set<String> sectorRRC_60 = new HashSet<String>();
 		
-		Set<String> sectorMaxPrb =  new HashSet<String>();
-		
 			
 		for (Map.Entry<String,HashMap<String, NetworkStatsData>> cell : aMap.entrySet()) { 
-			String cellId = cell.getKey();
+			
 			int maxRrcConnectedUsers = 0;
-			double maxDlPrbUtilization = 0;
 			
 			for (Map.Entry<String, NetworkStatsData> hourlyRecord : cell.getValue().entrySet()) {
 				NetworkStatsData mm = hourlyRecord.getValue();
 				double CqiToCheck = CQI;
 				
-				if (cellId.contains("_c18") || cellId.contains("_c19") || cellId.contains("_c20") ||
-						cellId.contains("_c9") || cellId.contains("_c10") || cellId.contains("_c11")) {
+				if (mm.getIsBiSector()) {
 					CqiToCheck = CQI_BISECTOR;
 				}
 					
 				if ((mm.getMeanCQI_1052() > CqiToCheck) && (mm.getInterference_0811() < INTERFERENCE) && 
 						(mm.getRrcConnectedUsers_0309() > maxRrcConnectedUsers)) {		
 					maxRrcConnectedUsers = mm.getRrcConnectedUsers_0309();
-				}
-				
-				if (mm.getDlPrbUtilization_1187() > maxDlPrbUtilization) {
-					maxDlPrbUtilization = mm.getDlPrbUtilization_1187();
 				}
 			}
 					
@@ -165,9 +224,6 @@ public class MimoAnalyzer2 {
 				sectorRRC_60.add(cell.getKey());
 			}	
 			
-			//if (maxDlPrbUtilization <= MAX_DL_PRB) {
-			//	sectorMaxPrb.add(cell.getKey());
-			//}
 		}
 		
 		System.out.println(">180: " + sectorRRC_180.size() + ", Percentage: " + 
@@ -186,10 +242,10 @@ public class MimoAnalyzer2 {
 		(double)sectorRRC_60.size()/(double)aMap.size() );
 		
 		
-	/*Iterator<String> itr = sectorMaxPrb.iterator();
+	/*Iterator<String> itr = sectorRRC_180.iterator();
 		while (itr.hasNext()) {
 			System.out.println(itr.next());
-		}*/
+		}*/	
 	}
 	
 }
