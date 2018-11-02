@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
@@ -19,7 +20,8 @@ public class MimoAnalyzer3 {
 		
 		MimoAnalyzer3 ma = new MimoAnalyzer3();
 		
-		File file = new File("C:\\Users\\Ken\\Documents\\5G\\Projects\\Data\\AP_31102018.csv");
+		File file = new File("C:\\Users\\Ken\\Documents\\5G\\Projects\\Data\\Mumbai-Thursday_29102018.csv");
+		//File file = new File("C:\\Users\\Ken\\Documents\\5G\\Projects\\Data\\Mumbai_test.csv");
 		
 		HashMap<String, HashMap<String, NetworkStatsData>> aMap = ma.loadFile(file);
 		
@@ -30,8 +32,8 @@ public class MimoAnalyzer3 {
 		ma.printMimoSiteNum(aMap, 1);
 		
 		// Estimate with x1.6 load
-		System.out.println("Under x1.6 load");
-		ma.printMimoSiteNum(aMap, 1.6);
+		//System.out.println("Under x1.6 load");
+		//ma.printMimoSiteNum(aMap, 1.6);
 		
 	}			
 	
@@ -99,10 +101,12 @@ public class MimoAnalyzer3 {
 			      index = 0;
 			      
 			      if (record.getBand().contentEquals("2300_1") || record.getBand().contentEquals("2300_2") ) {
-			    	 
-				      bMap.put(record.getDate()+"-"+record.getTime(), record);
-				      //System.out.println("***"+record.getDate()+"-"+record.getTime());
-				      aMap.put(record.getCellId(), bMap);
+			    	 // Only include ENB, exclude IBS and OSC
+			    	  if (record.getCellId().contains("-ENB-")) {
+					      bMap.put(record.getDate()+"-"+record.getTime(), record);
+					      //System.out.println("***"+record.getDate()+"-"+record.getTime());
+					      aMap.put(record.getCellId(), bMap);
+			    	  }
 			      } 
 			         
 			}
@@ -127,10 +131,16 @@ public class MimoAnalyzer3 {
 				String siteName = sectorName.split("_c")[0];
 				
 				String sectorCellName_1;
-				if (sectorName.contains("_c12") || sectorName.contains("_c13") || sectorName.contains("_c14")) {
-					sectorCellName_1 = siteName + "_c" + (sector - 12);
+				// 2300-1: Alpha:0, Beta1, Gamma:2; Bi-Sector: Alpha:20, Beta18, Gamma:19
+				// 2300-2: Alpha:12, Beta13, Gamma:14; Bi-Sector: Alpha:9, Beta10, Gamma:11
+				if (sectorName.contains("_c9")) {
+					sectorCellName_1 = siteName + "_c20";
+				} else if (sectorName.contains("_c10")) {
+					sectorCellName_1 = siteName + "_c18";
+				} else if (sectorName.contains("_c11")) {
+					sectorCellName_1 = siteName + "_c19";
 				} else {
-					sectorCellName_1 = siteName + "_c" + (sector + 9);
+					sectorCellName_1 = siteName + "_c" + (sector - 12);
 				}
 				
 				
@@ -142,14 +152,17 @@ public class MimoAnalyzer3 {
 						NetworkStatsData carrier_2_hourlyRecord = hourlyRecord.getValue();
 						
 						if ((carrier_1_hourlyRecord != null) && (carrier_2_hourlyRecord != null)) {
-							carrier_1_hourlyRecord.setMeanCQI_1052((carrier_1_hourlyRecord.getMeanCQI_1052() + carrier_2_hourlyRecord.getMeanCQI_1052())/2);
-							carrier_2_hourlyRecord.setMeanCQI_1052((carrier_1_hourlyRecord.getMeanCQI_1052() + carrier_2_hourlyRecord.getMeanCQI_1052())/2);
+							double averageMeanCQI = (carrier_1_hourlyRecord.getMeanCQI_1052() + carrier_2_hourlyRecord.getMeanCQI_1052())/2;
+							carrier_1_hourlyRecord.setMeanCQI_1052(averageMeanCQI);
+							carrier_2_hourlyRecord.setMeanCQI_1052(averageMeanCQI);
 							
-							carrier_1_hourlyRecord.setInterference_0811((carrier_1_hourlyRecord.getInterference_0811() + carrier_2_hourlyRecord.getInterference_0811())/2);
-							carrier_2_hourlyRecord.setInterference_0811((carrier_1_hourlyRecord.getInterference_0811() + carrier_2_hourlyRecord.getInterference_0811())/2);
+							double averageInterference = (carrier_1_hourlyRecord.getInterference_0811() + carrier_2_hourlyRecord.getInterference_0811())/2; 
+							carrier_1_hourlyRecord.setInterference_0811(averageInterference);
+							carrier_2_hourlyRecord.setInterference_0811(averageInterference);
 							
-							carrier_1_hourlyRecord.setRrcConnectedUsers_0309(carrier_1_hourlyRecord.getRrcConnectedUsers_0309() + carrier_2_hourlyRecord.getRrcConnectedUsers_0309());
-							carrier_2_hourlyRecord.setRrcConnectedUsers_0309(carrier_1_hourlyRecord.getRrcConnectedUsers_0309() + carrier_2_hourlyRecord.getRrcConnectedUsers_0309());
+							int totalRrcConnectedUsers = carrier_1_hourlyRecord.getRrcConnectedUsers_0309() + carrier_2_hourlyRecord.getRrcConnectedUsers_0309();
+							carrier_1_hourlyRecord.setRrcConnectedUsers_0309(totalRrcConnectedUsers);
+							carrier_2_hourlyRecord.setRrcConnectedUsers_0309(totalRrcConnectedUsers);
 						}
 					}
 				}	
@@ -161,12 +174,20 @@ public class MimoAnalyzer3 {
 				int sector = Integer.parseInt(biSectorCellName.split("_c")[1]);
 				String siteName = biSectorCellName.split("_c")[0];
 				
-				String biSectorCellName_1;
-				if (biSectorCellName.contains("_c18") || biSectorCellName.contains("_c19") || biSectorCellName.contains("_c20")) {
-					biSectorCellName_1 = siteName + "_c" + (sector - 18);
+				String biSectorCellName_1;				
+				
+				// 2300-1: Alpha:0, Beta:1, Gamma:2; Bi-Sector: Alpha:20, Beta:18, Gamma:19
+				// 2300-2: Alpha:12, Beta:13, Gamma:14; Bi-Sector: Alpha:9, Beta:10, Gamma:11
+				if (biSectorCellName.contains("_c18")) {
+					biSectorCellName_1 = siteName + "_c1";
+				} else if (biSectorCellName.contains("_c19")) {
+					biSectorCellName_1 = siteName + "_c2";
+				} else if (biSectorCellName.contains("_c20")) {
+					biSectorCellName_1 = siteName + "_c0";
 				} else {
 					biSectorCellName_1 = siteName + "_c" + (sector + 3);
 				}
+					
 				
 				for (Map.Entry<String, NetworkStatsData> hourlyRecord : cell.getValue().entrySet()) {
 					HashMap<String, NetworkStatsData> biSectorCell_1_map = aMap.get(biSectorCellName_1);
@@ -180,19 +201,17 @@ public class MimoAnalyzer3 {
 							biSector_1_hourlyRecord.setIsBiSector(true);
 							biSector_2_hourlyRecord.setIsBiSector(true);
 							
-							biSector_1_hourlyRecord.setRrcConnectedUsers_0309(
-									biSector_1_hourlyRecord.getRrcConnectedUsers_0309()+biSector_2_hourlyRecord.getRrcConnectedUsers_0309());
-							biSector_1_hourlyRecord.setMeanCQI_1052(
-									(biSector_1_hourlyRecord.getMeanCQI_1052()+biSector_2_hourlyRecord.getMeanCQI_1052())/2);
-							biSector_1_hourlyRecord.setInterference_0811(
-									(biSector_1_hourlyRecord.getInterference_0811()+biSector_2_hourlyRecord.getInterference_0811())/2);
+							int totalRrcConnectedUsers = biSector_1_hourlyRecord.getRrcConnectedUsers_0309()+biSector_2_hourlyRecord.getRrcConnectedUsers_0309();
+							biSector_1_hourlyRecord.setRrcConnectedUsers_0309(totalRrcConnectedUsers);
+							biSector_2_hourlyRecord.setRrcConnectedUsers_0309(totalRrcConnectedUsers);
 							
-							biSector_2_hourlyRecord.setRrcConnectedUsers_0309(
-									biSector_1_hourlyRecord.getRrcConnectedUsers_0309()+biSector_2_hourlyRecord.getRrcConnectedUsers_0309());
-							biSector_2_hourlyRecord.setMeanCQI_1052(
-									(biSector_1_hourlyRecord.getMeanCQI_1052()+biSector_2_hourlyRecord.getMeanCQI_1052())/2);
-							biSector_2_hourlyRecord.setInterference_0811(
-									(biSector_1_hourlyRecord.getInterference_0811()+biSector_2_hourlyRecord.getInterference_0811())/2);
+							double averageMeanCQI = (biSector_1_hourlyRecord.getMeanCQI_1052()+biSector_2_hourlyRecord.getMeanCQI_1052())/2;
+							biSector_1_hourlyRecord.setMeanCQI_1052(averageMeanCQI);
+							biSector_2_hourlyRecord.setMeanCQI_1052(averageMeanCQI);
+							
+							double averageInterference = (biSector_1_hourlyRecord.getInterference_0811()+biSector_2_hourlyRecord.getInterference_0811())/2;
+							biSector_1_hourlyRecord.setInterference_0811(averageInterference);
+							biSector_2_hourlyRecord.setInterference_0811(averageInterference);
 						}
 					} 
 				}	
@@ -222,12 +241,19 @@ public class MimoAnalyzer3 {
 		Set<String> biSectorRRC_90 = new HashSet<String>();
 		Set<String> biSectorRRC_60 = new HashSet<String>();
 		
+		Set<String> nonBiSectorRRC_180 = new HashSet<String>();
+		Set<String> nonBiSectorRRC_150 = new HashSet<String>();
+		Set<String> nonBiSectorRRC_120 = new HashSet<String>();
+		Set<String> nonBiSectorRRC_90 = new HashSet<String>();
+		Set<String> nonBiSectorRRC_60 = new HashSet<String>();
 		
-			
 		for (Map.Entry<String,HashMap<String, NetworkStatsData>> cell : aMap.entrySet()) { 
 			
 			int maxRrcConnectedUsers = 0;
 			boolean isBiSector = false;
+			/*if (cell.getKey().contains("I-MU-ABVL-ENB-0004_c12") || cell.getKey().contains("I-MU-ABVL-ENB-0004_c0") ) {
+				System.out.println("Here...");
+			};*/
 			
 			for (Map.Entry<String, NetworkStatsData> hourlyRecord : cell.getValue().entrySet()) {
 				NetworkStatsData mm = hourlyRecord.getValue();
@@ -249,26 +275,36 @@ public class MimoAnalyzer3 {
 				sectorRRC_180.add(cell.getKey());
 				if (isBiSector) {
 					biSectorRRC_180.add(cell.getKey());
+				} else {
+					nonBiSectorRRC_180.add(cell.getKey());
 				}
 			} else if (maxRrcConnectedUsers  * GROWTH_FACTOR >= 150) {
 				sectorRRC_150.add(cell.getKey());
 				if (isBiSector) {
 					biSectorRRC_150.add(cell.getKey());
+				} else {
+					nonBiSectorRRC_150.add(cell.getKey());
 				}
 			} else if (maxRrcConnectedUsers * GROWTH_FACTOR >= 120) {
 				sectorRRC_120.add(cell.getKey());
 				if (isBiSector) {
 					biSectorRRC_120.add(cell.getKey());
+				} else {
+					nonBiSectorRRC_120.add(cell.getKey());
 				}
 			} else if (maxRrcConnectedUsers * GROWTH_FACTOR >= 90) {
 				sectorRRC_90.add(cell.getKey());
 				if (isBiSector) {
 					biSectorRRC_90.add(cell.getKey());
+				} else {
+					nonBiSectorRRC_90.add(cell.getKey());
 				}
 			} else if (maxRrcConnectedUsers * GROWTH_FACTOR >= 60) {
 				sectorRRC_60.add(cell.getKey());
 				if (isBiSector) {
 					biSectorRRC_60.add(cell.getKey());
+				} else {
+					nonBiSectorRRC_60.add(cell.getKey());
 				}
 			}	
 			
@@ -292,10 +328,19 @@ public class MimoAnalyzer3 {
 		System.out.println("Bi-Sector cell amount: " + biSectors.size());
 		
 		
-	/*Iterator<String> itr = sectorRRC_180.iterator();
+		Iterator<String> itr = nonBiSectorRRC_180.iterator(); 	
 		while (itr.hasNext()) {
 			System.out.println(itr.next());
-		}*/	
+		}
+		itr = nonBiSectorRRC_150.iterator();	
+		while (itr.hasNext()) {
+			System.out.println(itr.next());
+		}
+		itr = nonBiSectorRRC_120.iterator(); 	
+		while (itr.hasNext()) {
+			System.out.println(itr.next());
+		}
+	
 	}
 	
 

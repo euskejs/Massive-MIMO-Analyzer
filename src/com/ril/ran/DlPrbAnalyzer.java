@@ -17,7 +17,7 @@ public class DlPrbAnalyzer {
 			
 			DlPrbAnalyzer da = new DlPrbAnalyzer();
 			
-			File file = new File("C:\\Users\\Ken\\Documents\\5G\\Projects\\Data\\Mumbai-Thursday_29102018.csv");
+			File file = new File("C:\\Users\\Ken\\Documents\\5G\\Projects\\Data\\Mumbai-Oct31_01112018.csv");
 			
 			HashMap<String, HashMap<String, NetworkStatsData>> aMap = da.loadFile(file);
 			
@@ -91,9 +91,10 @@ public class DlPrbAnalyzer {
 			      index = 0;
 			      
 			  
-			    	 
-				  bMap.put(record.getDate()+"-"+record.getTime(), record);
-				  aMap.put(record.getCellId(), bMap);
+			      if (record.getBand().contentEquals("2300_1") || record.getBand().contentEquals("2300_2") ) {	 
+					  bMap.put(record.getDate()+"-"+record.getTime(), record);
+					  aMap.put(record.getCellId(), bMap);
+			      }
 			        
 			}
 			sc.close();
